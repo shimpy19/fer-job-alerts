@@ -1,0 +1,46 @@
+name: Check for new jobs
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"  # every 30 minutes (UTC, GitHub may run it a few minutes late)
+  workflow_dispatch:         # adds a "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write            # needed to commit seen.json back to the repo
+
+concurrency:
+  group: check-jobs
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - run: python main.py
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          EMAIL_TO: ${{ vars.EMAIL_TO }}
+          KEYWORDS: ${{ vars.KEYWORDS }}
+
+      - name: Save seen.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898469+github-actions[bot]@users.noreply.github.com"
+          git add seen.json
+          if git diff --cached --quiet; then
+            echo "No changes to seen.json"
+          else
+            git commit -m "Update seen jobs"
+            git push
+          fi

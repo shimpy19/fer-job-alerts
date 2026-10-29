@@ -1,0 +1,16 @@
+# Virtual environment
+.venv/
+venv/
+
+# Secrets (Gmail app password etc.)
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+
+# PyCharm
+.idea/
+
+# macOS
+.DS_Store
