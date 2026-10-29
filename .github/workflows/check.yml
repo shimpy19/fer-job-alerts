@@ -2,7 +2,8 @@ name: Check for new jobs
 
 on:
   schedule:
-    - cron: "*/30 * * * *"  # every 30 minutes (UTC, GitHub may run it a few minutes late)
+    # Every 30 minutes, at :07 and :37 to avoid GitHub's busy :00/:30 slots (UTC, may run a few minutes late)
+    - cron: "7,37 * * * *"
   workflow_dispatch:         # adds a "Run workflow" button in the Actions tab
 
 permissions:
@@ -17,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
           cache: pip
