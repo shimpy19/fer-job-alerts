@@ -91,15 +91,48 @@ def build_email(jobs, sender, recipient):
     return msg
 
 
+def get_credentials():
+    sender = os.environ.get("GMAIL_ADDRESS", "").strip()
+    # App passwords are shown as "abcd efgh ijkl mnop"; Gmail wants them without spaces.
+    password = "".join(os.environ.get("GMAIL_APP_PASSWORD", "").split())
+    recipient = os.environ.get("EMAIL_TO", "").strip() or sender
+    return sender, password, recipient
+
+
 def send_email(msg, sender, password):
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as smtp:
-        smtp.login(sender, password)
-        smtp.send_message(msg)
+    if not sender or not password:
+        sys.exit("GMAIL_ADDRESS and GMAIL_APP_PASSWORD must both be set.")
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=30) as smtp:
+            smtp.login(sender, password)
+            smtp.send_message(msg)
+    except (smtplib.SMTPAuthenticationError, smtplib.SMTPServerDisconnected) as e:
+        # Gmail usually just drops the connection when the login is wrong.
+        sys.exit(
+            f"Gmail login failed ({type(e).__name__}). Check that GMAIL_ADDRESS is the Gmail "
+            f"account the app password was created for, and that GMAIL_APP_PASSWORD is the "
+            f"16-letter app password (not your normal password)."
+        )
+
+
+def send_test_email():
+    sender, password, recipient = get_credentials()
+    msg = EmailMessage()
+    msg["Subject"] = "FER karijere: test email"
+    msg["From"] = sender
+    msg["To"] = recipient
+    msg.set_content(f"If you can read this, email alerts work.\n\n{URL}")
+    send_email(msg, sender, password)
+    print(f"Test email sent to {recipient}.")
 
 
 def main():
     dry_run = "--dry-run" in sys.argv
     load_env_file()
+
+    if "--test-email" in sys.argv:
+        send_test_email()
+        return
 
     jobs = parse_jobs(fetch_page())
     if not jobs:
@@ -122,13 +155,12 @@ def main():
     print(f"{len(new_jobs)} new, {len(to_notify)} matching keywords.")
 
     if to_notify:
-        sender = os.environ["GMAIL_ADDRESS"]
-        recipient = os.environ.get("EMAIL_TO") or sender
+        sender, password, recipient = get_credentials()
         msg = build_email(to_notify, sender, recipient)
         if dry_run:
             print(f"--- Would send to {recipient}: {msg['Subject']}\n{msg.get_content()}")
         else:
-            send_email(msg, sender, os.environ["GMAIL_APP_PASSWORD"])
+            send_email(msg, sender, password)
             print(f"Email sent to {recipient}.")
 
     # Saved only after the email succeeds, so a failed send is retried next run.
