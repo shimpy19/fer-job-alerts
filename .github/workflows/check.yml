@@ -4,7 +4,7 @@ on:
   schedule:
     # Every 30 minutes, at :07 and :37 to avoid GitHub's busy :00/:30 slots (UTC, may run a few minutes late)
     - cron: "7,37 * * * *"
-  workflow_dispatch:         # adds a "Run workflow" button in the Actions tab
+  workflow_dispatch:         # "Run workflow" button, also used by cron-job.org (see README)
 
 permissions:
   contents: write            # needed to commit seen.json back to the repo
@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: main  # latest seen.json, even if this run was queued behind another one
 
       - uses: actions/setup-python@v6
         with:

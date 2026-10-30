@@ -31,6 +31,22 @@ The first run (no `seen.json` yet) only saves the current posts and sends no ema
 3. Go to **Actions → Check for new jobs → Run workflow** to test it. After that it runs by itself
    every 30 minutes; scheduled runs appear in the Actions tab marked *Scheduled*.
 
+## If scheduled runs don't start
+
+GitHub's `schedule` trigger is unreliable: runs can be late, skipped, or
+[never start at all](https://github.com/orgs/community/discussions/185355). The workaround is an external
+timer that starts the workflow through the GitHub API every 30 minutes:
+
+1. Create a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with
+   **Only select repositories → this repo** and permission **Actions: Read and write** (nothing else).
+2. On [cron-job.org](https://cron-job.org), create a job:
+   - URL: `https://api.github.com/repos/<user>/<repo>/actions/workflows/check.yml/dispatches`
+   - Schedule: every 30 minutes (e.g. minutes 22 and 52, so it doesn't collide with the GitHub schedule)
+   - Method `POST`, body `{"ref":"main"}`
+   - Headers: `Authorization: Bearer <token>`, `Accept: application/vnd.github+json`,
+     `Content-Type: application/json`
+3. Use **Test run**: GitHub answers `204 No Content` and a run appears in the Actions tab.
+
 ## Run locally
 
 ```bash
